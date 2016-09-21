@@ -184,6 +184,11 @@ void MainWindow::init()
     // Add keyboard shortcut for "Edit Cell" dock
     ui->viewMenu->actions().at(3)->setShortcut(QKeySequence(tr("Ctrl+E")));
 
+    // Add menu item for tree structure dock
+    ui->viewMenu->insertAction(ui->viewDBToolbarAction, ui->dockTreeStruc->toggleViewAction());
+    ui->viewMenu->actions().at(4)->setShortcut(QKeySequence(tr("Ctrl+R")));
+    ui->viewMenu->actions().at(4)->setIcon(QIcon(":/icons/log_dock"));
+
     // If we're not compiling in SQLCipher, hide it's FAQ link in the help menu
 #ifndef ENABLE_SQLCIPHER
     ui->actionSqlCipherFaq->setVisible(false);
@@ -502,6 +507,9 @@ void MainWindow::populateTable()
     // update plot
     updatePlot(m_browseTableModel);
 
+    // update tree structure viewer dock
+    updateTreeStruc(m_browseTableModel);
+
     QApplication::restoreOverrideCursor();
 }
 
@@ -528,6 +536,9 @@ bool MainWindow::fileClose()
 
     // Reset the plot dock model
     updatePlot(0);
+
+    // reset the tree structure view model
+    updateTreeStruc(NULL);
 
     activateFields(false);
 
@@ -989,6 +1000,7 @@ void MainWindow::executeQuery()
     } while( tail && *tail != 0 && (sql3status == SQLITE_OK || sql3status == SQLITE_DONE));
     sqlWidget->finishExecution(statusMessage);
     updatePlot(sqlWidget->getModel());
+    updateTreeStruc(sqlWidget->getModel());
 
     connect(sqlWidget->getTableResult(), SIGNAL(clicked(QModelIndex)), this, SLOT(dataTableSelectionChanged(QModelIndex)));
 
@@ -2586,5 +2598,121 @@ void MainWindow::browseDataFetchAllData()
 
         // Update plot
         updatePlot(m_browseTableModel);
+
+        // update tree structure view
+        updateTreeStruc(m_browseTableModel);
+    }
+}
+
+void MainWindow::getTreeStrucSettings(QString &cIdField, QString &cParendIdField, QString &cTitleField)
+{
+    cIdField = ui->cbTreeStrucCurrentIdField->currentText();
+    if (cIdField.isEmpty()) throw std::exception("No field for current node id selected.");
+
+    cParendIdField = ui->cbTreeStrucParentIdField->currentText();
+    if (cParendIdField.isEmpty()) throw std::exception("No field for parent node id selected.");
+
+    cTitleField = ui->cbTreeStrucLabelField->currentText();
+    if (cTitleField.isEmpty()) throw std::exception("No title field specified.");
+}
+
+void MainWindow::queryTreeStrucEntries(QTreeWidgetItem * it, long parentId)
+{
+    QString cIdField, cParendIdField, cTitleField;
+    getTreeStrucSettings(cIdField, cParendIdField, cTitleField);
+    queryTreeStrucEntries(it, cParendIdField, parentId, cIdField, cTitleField);
+}
+
+void MainWindow::queryTreeStrucEntries(QTreeWidgetItem* it, const QString & parentIdField, long parentId, const QString & IdField, const QString & titleField)
+{
+    QString table = m_currentTreeStrucModel->table();
+    QString stmt = "select " + IdField + ", " + titleField + " from " + table + " where " + parentIdField + "=" + QString::number(parentId) + ";";
+    sqlite3_stmt *pstmt;
+    int res = sqlite3_prepare_v2(db._db, stmt.toStdString().c_str(), -1, &pstmt, NULL);
+    if (res == SQLITE_OK) {
+        while (sqlite3_step(pstmt) == SQLITE_ROW) {
+            long id = sqlite3_column_int64(pstmt, 0);
+            QString title = QString::fromLocal8Bit((const char*)sqlite3_column_text(pstmt, 1));
+            QTreeWidgetItem* newIt = new QTreeWidgetItem(QStringList() << QString::number(id) << QString::number(parentId) << title);
+            newIt->setChildIndicatorPolicy(QTreeWidgetItem::ShowIndicator);
+            newIt->setData(0, Qt::UserRole, id);
+            if (it == NULL)
+                ui->twTreeStruc->addTopLevelItem(newIt);
+            else
+                it->addChild(newIt);
+        }
+    }
+    else
+    {
+        QString errstr = sqlite3_errmsg(db._db);
+    }
+    sqlite3_finalize(pstmt);
+}
+
+void MainWindow::on_twTreeStruc_itemExpanded(QTreeWidgetItem *item)
+{
+    qDebug() << "Item expanded: " << item->data(0, Qt::UserRole);
+
+    long id = item->data(0, Qt::UserRole).toLongLong();
+    queryTreeStrucEntries(item, id);
+}
+
+void MainWindow::on_twTreeStruc_itemCollapsed(QTreeWidgetItem *item)
+{
+    qDebug() << "Item collapsed: " << item->data(0, Qt::UserRole);
+    qDeleteAll(item->takeChildren());
+}
+
+void MainWindow::on_tbRefreshTreeStruc_clicked()
+{
+    ui->twTreeStruc->clear();
+    try {
+        bool ok;
+        long croot = ui->edTreeStrucRootNodeId->text().toLong(&ok);
+        if (!ok) throw std::exception("Invalid root node id: not a Number!");
+
+        QString cIdField, cParendIdField, cTitleField;
+        getTreeStrucSettings(cIdField, cParendIdField, cTitleField);
+        queryTreeStrucEntries(NULL, cIdField, croot, cIdField, cTitleField);
+    }
+    catch (const std::exception& ex)
+    {
+        QMessageBox::critical(this, "Error", ex.what());
+    }
+}
+
+void MainWindow::updateTreeStruc(SqliteTableModel *model, bool update)
+{
+    if(update)
+    {
+        m_currentTreeStrucModel = model;
+
+        // save current selected columns, so we can restore them after the update
+        QString saveIdField = ui->cbTreeStrucCurrentIdField->currentText();
+        ui->cbTreeStrucCurrentIdField->clear();
+        QString saveParentIdField = ui->cbTreeStrucParentIdField->currentText();
+        ui->cbTreeStrucParentIdField->clear();
+        QString saveLabelField = ui->cbTreeStrucLabelField->currentText();
+        ui->cbTreeStrucLabelField->clear();
+
+        ui->twTreeStruc->clear();
+
+        if(model)
+        {
+            for(int i = 0; i < model->columnCount(); ++i)
+            {
+                QString fieldname = model->headerData(i, Qt::Horizontal).toString();
+                ui->cbTreeStrucCurrentIdField->addItem(fieldname);
+                ui->cbTreeStrucParentIdField->addItem(fieldname);
+                ui->cbTreeStrucLabelField->addItem(fieldname);
+            }
+            int index;
+            index = ui->cbTreeStrucCurrentIdField->findText(saveIdField);
+            ui->cbTreeStrucCurrentIdField->setCurrentIndex( index );
+            index = ui->cbTreeStrucParentIdField->findText(saveIdField);
+            ui->cbTreeStrucParentIdField->setCurrentIndex( index );
+            index = ui->cbTreeStrucLabelField->findText(saveIdField);
+            ui->cbTreeStrucLabelField->setCurrentIndex( index );
+        }
     }
 }

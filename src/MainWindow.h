@@ -114,6 +114,7 @@ private:
     SqliteTableModel* m_browseTableModel;
     SqliteTableModel* m_currentTabTableModel;
     SqliteTableModel* m_currentPlotModel;
+    SqliteTableModel* m_currentTreeStrucModel;
     QMenu *popupTableMenu;
     QMenu *recentFilesMenu;
     QMenu *popupSaveSqlFileMenu;
@@ -240,6 +241,14 @@ private slots:
     void browseDataSetTableEncoding(bool forAllTables = false);
     void browseDataSetDefaultTableEncoding();
     void browseDataFetchAllData();
+
+    void on_twTreeStruc_itemExpanded(QTreeWidgetItem *item);
+    void on_twTreeStruc_itemCollapsed(QTreeWidgetItem *item);
+    void on_tbRefreshTreeStruc_clicked();
+    void updateTreeStruc(SqliteTableModel* model, bool update = true);
+    void getTreeStrucSettings(QString &cIdField, QString &cParendIdField, QString &cTitleField);
+    void queryTreeStrucEntries(QTreeWidgetItem *it, long parentId);
+    void queryTreeStrucEntries(QTreeWidgetItem *it, const QString &parentIdField, long parentId, const QString &IdField, const QString &titleField);
 };
 
 #endif
