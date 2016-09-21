@@ -144,6 +144,7 @@ LIBPATH_QHEXEDIT=$$OUT_PWD/../libs/qhexedit
 LIBPATH_ANTLR=$$OUT_PWD/../libs/antlr-2.7.7
 LIBPATH_QCUSTOMPLOT=$$OUT_PWD/../libs/qcustomplot-source
 LIBPATH_QSCINTILLA=$$OUT_PWD/../libs/qscintilla/Qt4Qt5
+LIBPATH_SQLITE3=$$OUT_PWD/../libs/sqlite3
 unix {
     LIBS += -ldl
 }
@@ -159,12 +160,14 @@ win32 {
         LIBPATH_ANTLR = $$LIBPATH_ANTLR/debug
         LIBPATH_QCUSTOMPLOT = $$LIBPATH_QCUSTOMPLOT/debug
     LIBPATH_QSCINTILLA = $$LIBPATH_QSCINTILLA/debug
+        LIBPATH_SQLITE3=$$LIBPATH_SQLITE3/debug
     }
     CONFIG(release,debug|release) {
         LIBPATH_QHEXEDIT = $$LIBPATH_QHEXEDIT/release
         LIBPATH_ANTLR = $$LIBPATH_ANTLR/release
         LIBPATH_QCUSTOMPLOT = $$LIBPATH_QCUSTOMPLOT/release
     LIBPATH_QSCINTILLA = $$LIBPATH_QSCINTILLA/release
+        LIBPATH_SQLITE3=$$LIBPATH_SQLITE3/release
     }
     QMAKE_CXXFLAGS += -DCHECKNEWVERSION
 
@@ -176,7 +179,8 @@ win32 {
 mac {
     TARGET = "DB Browser for SQLite"
     RC_FILE = macapp.icns
-    QT+= macextras
+    # strange: this is active on windows and causes an error
+	# QT+= macextras
     INCLUDEPATH += /usr/local/include
     LIBS += -L/usr/local/lib -framework Carbon
     QMAKE_INFO_PLIST = app.plist
@@ -184,8 +188,8 @@ mac {
 }
 
 UI_DIR = .ui
-INCLUDEPATH += $$PWD/../libs/antlr-2.7.7 $$PWD/../libs/qhexedit $$PWD/../libs/qcustomplot-source $$PWD/../libs/qscintilla/Qt4Qt5 $$PWD/..
-LIBS += -L$$LIBPATH_QHEXEDIT -L$$LIBPATH_ANTLR -L$$LIBPATH_QCUSTOMPLOT -L$$LIBPATH_QSCINTILLA -lantlr -lqhexedit -lqcustomplot -lqscintilla2
+INCLUDEPATH += $$PWD/../libs/antlr-2.7.7 $$PWD/../libs/qhexedit $$PWD/../libs/qcustomplot-source $$PWD/../libs/qscintilla/Qt4Qt5 $$PWD/../libs/sqlite3 $$PWD/..
+LIBS += -L$$LIBPATH_QHEXEDIT -L$$LIBPATH_ANTLR -L$$LIBPATH_QCUSTOMPLOT -L$$LIBPATH_QSCINTILLA -L$$LIBPATH_SQLITE3 -lantlr -lqhexedit -lqcustomplot -lqscintilla2
 DEPENDPATH += $$PWD/../libs/antlr-2.7.7 $$PWD/../libs/qhexedit $$PWD/../libs/qcustomplot-source $$PWD/../libs/qscintilla/Qt4Qt5
 
 # Rules for creating/updating {ts|qm}-files

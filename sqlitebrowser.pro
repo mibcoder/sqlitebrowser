@@ -6,4 +6,5 @@ SUBDIRS = libs/antlr-2.7.7/antlr.pro \
     libs/qhexedit/qhexedit.pro \
     libs/qcustomplot-source/qcustomplot.pro \
     libs/qscintilla/Qt4Qt5/qscintilla.pro \
+    libs/sqlite3/sqlite3.pro \
     src
