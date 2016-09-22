@@ -75,6 +75,7 @@ void MainWindow::init()
     // Load window settings
     tabifyDockWidget(ui->dockLog, ui->dockPlot);
     tabifyDockWidget(ui->dockLog, ui->dockSchema);
+	tabifyDockWidget(ui->dockLog, ui->dockTreeStruc);
 
     // Connect SQL logging and database state setting to main window
     connect(&db, SIGNAL(dbChanged(bool)), this, SLOT(dbState(bool)));
@@ -2616,26 +2617,32 @@ void MainWindow::getTreeStrucSettings(QString &cIdField, QString &cParendIdField
     if (cTitleField.isEmpty()) throw std::exception("No title field specified.");
 }
 
-void MainWindow::queryTreeStrucEntries(QTreeWidgetItem * it, long parentId)
+void MainWindow::queryTreeStrucEntries(QTreeWidgetItem* it, const QString& searchField, const QString & parentIdField, const QString& parentId, const QString & IdField, const QString & titleField)
 {
-    QString cIdField, cParendIdField, cTitleField;
-    getTreeStrucSettings(cIdField, cParendIdField, cTitleField);
-    queryTreeStrucEntries(it, cParendIdField, parentId, cIdField, cTitleField);
-}
-
-void MainWindow::queryTreeStrucEntries(QTreeWidgetItem* it, const QString & parentIdField, long parentId, const QString & IdField, const QString & titleField)
-{
+	const QString nullStr = "NULL";
     QString table = m_currentTreeStrucModel->table();
-    QString stmt = "select " + IdField + ", " + titleField + " from " + table + " where " + parentIdField + "=" + QString::number(parentId) + ";";
+	QString stmt = "select " + IdField + ", " + parentIdField + ", " + titleField + " from " + table + " where " + searchField;
+	if (parentId != nullStr) {
+		stmt += "=?;";
+	}
+	else {
+		stmt += " is null;";
+	}
     sqlite3_stmt *pstmt;
     int res = sqlite3_prepare_v2(db._db, stmt.toStdString().c_str(), -1, &pstmt, NULL);
+	if (res == SQLITE_OK) {
+		if (parentId != nullStr) {
+			// unbound parameters are treated as NULL
+			res = sqlite3_bind_text(pstmt, 1, parentId.toStdString().c_str(), -1, SQLITE_TRANSIENT);
+		}
+	}
     if (res == SQLITE_OK) {
         while (sqlite3_step(pstmt) == SQLITE_ROW) {
-            long id = sqlite3_column_int64(pstmt, 0);
-            QString title = QString::fromLocal8Bit((const char*)sqlite3_column_text(pstmt, 1));
-            QTreeWidgetItem* newIt = new QTreeWidgetItem(QStringList() << QString::number(id) << QString::number(parentId) << title);
+            QString id = QString::fromLocal8Bit((const char*)sqlite3_column_text(pstmt, 0) );
+			QString pId = QString::fromLocal8Bit((const char*)sqlite3_column_text(pstmt, 1));
+			QString title = QString::fromLocal8Bit((const char*)sqlite3_column_text(pstmt, 2));
+            QTreeWidgetItem* newIt = new QTreeWidgetItem(QStringList() << id << pId << title);
             newIt->setChildIndicatorPolicy(QTreeWidgetItem::ShowIndicator);
-            newIt->setData(0, Qt::UserRole, id);
             if (it == NULL)
                 ui->twTreeStruc->addTopLevelItem(newIt);
             else
@@ -2651,15 +2658,14 @@ void MainWindow::queryTreeStrucEntries(QTreeWidgetItem* it, const QString & pare
 
 void MainWindow::on_twTreeStruc_itemExpanded(QTreeWidgetItem *item)
 {
-    qDebug() << "Item expanded: " << item->data(0, Qt::UserRole);
-
-    long id = item->data(0, Qt::UserRole).toLongLong();
-    queryTreeStrucEntries(item, id);
+	QString id = item->text(0); 
+	QString cIdField, cParentIdField, cTitleField;
+	getTreeStrucSettings(cIdField, cParentIdField, cTitleField);
+	queryTreeStrucEntries(item, cParentIdField, cParentIdField, id, cIdField, cTitleField);
 }
 
 void MainWindow::on_twTreeStruc_itemCollapsed(QTreeWidgetItem *item)
 {
-    qDebug() << "Item collapsed: " << item->data(0, Qt::UserRole);
     qDeleteAll(item->takeChildren());
 }
 
@@ -2667,13 +2673,15 @@ void MainWindow::on_tbRefreshTreeStruc_clicked()
 {
     ui->twTreeStruc->clear();
     try {
-        bool ok;
-        long croot = ui->edTreeStrucRootNodeId->text().toLong(&ok);
-        if (!ok) throw std::exception("Invalid root node id: not a Number!");
-
-        QString cIdField, cParendIdField, cTitleField;
-        getTreeStrucSettings(cIdField, cParendIdField, cTitleField);
-        queryTreeStrucEntries(NULL, cIdField, croot, cIdField, cTitleField);
+		QString root = ui->edTreeStrucRootNodeId->text();
+        QString cIdField, cParentIdField, cTitleField;
+        getTreeStrucSettings(cIdField, cParentIdField, cTitleField);
+		if (root == "NULL") {
+			queryTreeStrucEntries(NULL, cParentIdField, cParentIdField, root, cIdField, cTitleField);
+		}
+		else {
+			queryTreeStrucEntries(NULL, cIdField, cParentIdField, root, cIdField, cTitleField);
+		}
     }
     catch (const std::exception& ex)
     {

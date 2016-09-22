@@ -247,8 +247,8 @@ private slots:
     void on_tbRefreshTreeStruc_clicked();
     void updateTreeStruc(SqliteTableModel* model, bool update = true);
     void getTreeStrucSettings(QString &cIdField, QString &cParendIdField, QString &cTitleField);
-    void queryTreeStrucEntries(QTreeWidgetItem *it, long parentId);
-    void queryTreeStrucEntries(QTreeWidgetItem *it, const QString &parentIdField, long parentId, const QString &IdField, const QString &titleField);
+    void queryTreeStrucEntries(QTreeWidgetItem *it, const QString& searchField, const QString &parentIdField, 
+		const QString& parentId, const QString &IdField, const QString &titleField);
 };
 
 #endif
