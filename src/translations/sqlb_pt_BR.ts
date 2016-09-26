@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!DOCTYPE TS>
-<TS version="2.0" language="pt_BR">
+<TS version="2.1" language="pt_BR">
 <context>
     <name>AboutDialog</name>
     <message>
@@ -383,6 +383,14 @@ Abortando execução.</translation>
         <source>Triggers (%1)</source>
         <translation>Gatilhos (%1)</translation>
     </message>
+    <message>
+        <source>Browsables (%1)</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>All</source>
+        <translation type="unfinished"></translation>
+    </message>
 </context>
 <context>
     <name>EditDialog</name>
@@ -682,7 +690,7 @@ Todos os dados atualmente armazenados nesse campo serão perdidos.</translation>
     </message>
     <message>
         <source>This column is referenced in a foreign key in table %1, column %2 and thus its name cannot be changed.</source>
-        <translation>Essa coluna é referenciada em uma chave estrangeira na tabela %1, coluna %2 e portanto não pode ter seu nome alterado.</translation>
+        <translation type="vanished">Essa coluna é referenciada em uma chave estrangeira na tabela %1, coluna %2 e portanto não pode ter seu nome alterado.</translation>
     </message>
     <message>
         <source>Column &apos;%1&apos; has no unique data.
@@ -698,6 +706,14 @@ Todos os dados atualmente armazenados nesse campo serão perdidos.</translation>
  - Flag &quot;primary key&quot; definida
  - Incremento automático desativado</translation>
     </message>
+    <message>
+        <source>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600; color:#ff0000;&quot;&gt;Warning: &lt;/span&gt;There is something with this table definition that our parser doesn&apos;t fully understand. Modifying and saving this table might result it in problems.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>This column is referenced in a foreign key in table %1 and thus its name cannot be changed.</source>
+        <translation type="unfinished"></translation>
+    </message>
 </context>
 <context>
     <name>ExportDataDialog</name>
@@ -707,15 +723,15 @@ Todos os dados atualmente armazenados nesse campo serão perdidos.</translation>
     </message>
     <message>
         <source>&amp;Table(s)</source>
-        <translation>&amp;Tabela(s)</translation>
+        <translation type="vanished">&amp;Tabela(s)</translation>
     </message>
     <message>
         <source>&amp;Column names in first line</source>
-        <translation>Nomes das &amp;colunas na primeira linha</translation>
+        <translation type="vanished">Nomes das &amp;colunas na primeira linha</translation>
     </message>
     <message>
         <source>Field &amp;separator</source>
-        <translation>&amp;Separador de campos</translation>
+        <translation type="vanished">&amp;Separador de campos</translation>
     </message>
     <message>
         <source>,</source>
@@ -784,6 +800,26 @@ Todos os dados atualmente armazenados nesse campo serão perdidos.</translation>
     <message>
         <source>Unix: LF (\n)</source>
         <translation>Unix: LF (\n)</translation>
+    </message>
+    <message>
+        <source>Tab&amp;le(s)</source>
+        <translation type="unfinished">Tabe&amp;las(s)</translation>
+    </message>
+    <message>
+        <source>Colu&amp;mn names in first line</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Fie&amp;ld separator</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Pretty print</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Text files(*.json *.js *.txt)</source>
+        <translation type="unfinished"></translation>
     </message>
 </context>
 <context>
@@ -1339,7 +1375,7 @@ Deseja inserir mesmo assim?</translation>
     </message>
     <message>
         <source>DB Schema</source>
-        <translation>Esquema do banco de dados</translation>
+        <translation type="vanished">Esquema do banco de dados</translation>
     </message>
     <message>
         <source>&amp;New Database...</source>
@@ -1579,7 +1615,7 @@ Deseja inserir mesmo assim?</translation>
     </message>
     <message>
         <source>Execute current line [Ctrl+E]</source>
-        <translation>Executar linha atual [Ctrl+E]</translation>
+        <translation type="vanished">Executar linha atual [Ctrl+E]</translation>
     </message>
     <message>
         <source>Ctrl+E</source>
@@ -1859,7 +1895,7 @@ Você tem certeza?</translation>
     </message>
     <message>
         <source>Edit Database Cell</source>
-        <translation>Editar célula do banco de dados</translation>
+        <translation type="vanished">Editar célula do banco de dados</translation>
     </message>
     <message>
         <source>SQL &amp;Log</source>
@@ -2118,6 +2154,82 @@ Deixe o campo em branco para usar a codificação do banco de dados.</translatio
     <message>
         <source>Execute SQL</source>
         <translation>Executar SQL</translation>
+    </message>
+    <message>
+        <source>Edit Database &amp;Cell</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>DB Sche&amp;ma</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Execute current line [Shift+F5]</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Shift+F5</source>
+        <translation type="unfinished">Shift+F5</translation>
+    </message>
+    <message>
+        <source>SQLCipher &amp;FAQ...</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Opens the SQLCipher FAQ in a browser window</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Table(s) to JSON...</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Export one or more table(s) to a JSON file</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Tree Structure</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Refresh</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>current id:</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>parent id:</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>label:</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>root node id:</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>0</source>
+        <translation type="unfinished">0</translation>
+    </message>
+    <message>
+        <source>Id</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Parent-Id</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Label</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Ctrl+R</source>
+        <translation type="unfinished"></translation>
     </message>
 </context>
 <context>
@@ -2421,6 +2533,14 @@ Deixe o campo em branco para usar a codificação do banco de dados.</translatio
     <message>
         <source>Code co&amp;mpletion</source>
         <translation>Co&amp;mpletação de código</translation>
+    </message>
+    <message>
+        <source>Content</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Symbol limit in cell</source>
+        <translation type="unfinished"></translation>
     </message>
 </context>
 <context>
