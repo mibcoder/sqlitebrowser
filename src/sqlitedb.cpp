@@ -288,7 +288,8 @@ bool DBBrowserDB::releaseSavepoint(const QString& pointname)
         return false;
 
     QString query = QString("RELEASE %1;").arg(pointname);
-    executeSQL(query, false, false);
+    if(!executeSQL(query, false, false))
+        return false;
     savepointList.removeAll(pointname);
     emit dbChanged(getDirty());
 
@@ -624,6 +625,7 @@ bool DBBrowserDB::executeSQL(QString statement, bool dirtyDB, bool logsql)
     } else {
         lastErrorMessage = QString("%1 (%2)").arg(QString::fromUtf8(errmsg)).arg(statement);
         qWarning() << "executeSQL: " << statement << "->" << errmsg;
+        sqlite3_free(errmsg);
         return false;
     }
 }
@@ -1050,12 +1052,16 @@ bool DBBrowserDB::renameColumn(const QString& tablename, const QString& name, sq
     {
         // If this object references the table and it's not the table itself save it's SQL string
         if((*it).getTableName() == tablename && (*it).gettype() != "table")
-            otherObjectsSql += (*it).getsql() + "\n";
+            otherObjectsSql += (*it).getsql().trimmed() + ";\n";
     }
 
-    // Store the current foreign key settings and then disable the foreign keys being enforced to make sure the table can be dropped without errors
-    QString foreignKeysOldSettings = getPragma("foreign_keys");
-    setPragma("foreign_keys", "0");
+    // We need to disable foreign keys here. The reason is that in the next step the entire table will be dropped and there might be foreign keys
+    // in other tables that reference this table. These foreign keys would then cause the drop command in the next step to fail. However, we can't
+    // simply disable foreign keys here since that is not allowed from inside a transaction and we definitely are inside a transaction at that point.
+    // So what we do instead is defer foreign key enforcement until the end of the transaction which effectively disables foreign keys for us here.
+    // But because we don't really want to defer foreign keys, the former value of that pragma is saved here in order to restore the old value later.
+    QString foreignKeysOldSettings = getPragma("defer_foreign_keys");
+    setPragma("defer_foreign_keys", "1");
 
     // Delete the old table
     if(!executeSQL(QString("DROP TABLE %1;").arg(sqlb::escapeIdentifier(tablename)), true, true))
@@ -1075,7 +1081,7 @@ bool DBBrowserDB::renameColumn(const QString& tablename, const QString& name, sq
     }
 
     // Restore the former foreign key settings
-    setPragma("foreign_keys", foreignKeysOldSettings);
+    setPragma("defer_foreign_keys", foreignKeysOldSettings);
 
     // Restore the saved triggers, views and indices
     if(!executeMultiSQL(otherObjectsSql, true, true))

@@ -37,14 +37,18 @@ QVariant DbStructureModel::data(const QModelIndex& index, int role) const
     QTreeWidgetItem* item = static_cast<QTreeWidgetItem*>(index.internalPointer());
 
     // Depending on the role either return the text or the icon
-    if(role == Qt::DisplayRole)
+    switch(role)
+    {
+    case Qt::DisplayRole:
         return Settings::getSettingsValue("db", "hideschemalinebreaks").toBool() ? item->text(index.column()).replace("\n", " ").simplified() : item->text(index.column());
-    else if(role == Qt::ToolTipRole)
-        return item->text(index.column());  // Don't modify the text when it's supposed to be shown in a tooltip
-    else if(role == Qt::DecorationRole)
+    case Qt::EditRole:
+    case Qt::ToolTipRole:   // Don't modify the text when it's supposed to be shown in a tooltip
+        return item->text(index.column());
+    case Qt::DecorationRole:
         return item->icon(index.column());
-    else
+    default:
         return QVariant();
+    }
 }
 
 Qt::ItemFlags DbStructureModel::flags(const QModelIndex &index) const
@@ -121,10 +125,7 @@ void DbStructureModel::reloadData()
 
     // Remove all data except for the root item
     while(rootItem->childCount())
-    {
         delete rootItem->child(0);
-        rootItem->removeChild(rootItem->child(0));
-    }
 
     // Return here if no DB is opened
     if(!m_db.isOpen())

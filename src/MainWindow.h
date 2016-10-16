@@ -33,6 +33,30 @@ public:
 
     DBBrowserDB& getDb() { return db; }
 
+    struct PlotSettings
+    {
+        int lineStyle;
+        int pointShape;
+        QColor colour;
+
+        friend QDataStream& operator<<(QDataStream& stream, const MainWindow::PlotSettings& object)
+        {
+            stream << object.lineStyle;
+            stream << object.pointShape;
+            stream << object.colour;
+
+            return stream;
+        }
+        friend QDataStream& operator>>(QDataStream& stream, MainWindow::PlotSettings& object)
+        {
+            stream >> object.lineStyle;
+            stream >> object.pointShape;
+            stream >> object.colour;
+
+            return stream;
+        }
+    };
+
     struct BrowseDataTableSettings
     {
         int sortOrderIndex;
@@ -42,6 +66,8 @@ public:
         QMap<int, QString> displayFormats;
         bool showRowid;
         QString encoding;
+        QString plotXAxis;
+        QMap<QString, PlotSettings> plotYAxes;
 
         friend QDataStream& operator<<(QDataStream& stream, const MainWindow::BrowseDataTableSettings& object)
         {
@@ -52,6 +78,8 @@ public:
             stream << object.displayFormats;
             stream << object.showRowid;
             stream << object.encoding;
+            stream << object.plotXAxis;
+            stream << object.plotYAxes;
 
             return stream;
         }
@@ -66,6 +94,15 @@ public:
             stream >> object.displayFormats;
             stream >> object.showRowid;
             stream >> object.encoding;
+
+            // Versions pre 3.10.0 didn't store the following information in their project files.
+            // To be absolutely sure that nothing strange happens when we read past the stream for
+            // those cases, check for the end of the stream here.
+            if(stream.atEnd())
+                return stream;
+
+            stream >> object.plotXAxis;
+            stream >> object.plotYAxes;
 
             return stream;
         }
@@ -155,12 +192,13 @@ protected:
     void dragEnterEvent(QDragEnterEvent *event);
     void dropEvent(QDropEvent *event);
     void resizeEvent(QResizeEvent *event);
+    void keyPressEvent(QKeyEvent* event);
 
 public slots:
     bool fileOpen(const QString& fileName = QString(), bool dontAddToRecentFiles = false);
     void logSql(const QString &sql, int msgtype);
     void dbState(bool dirty);
-    void browseRefresh();
+    void refresh();
     void jumpToRow(const QString& table, QString column, const QByteArray& value);
     void switchToBrowseDataTab(QString tableToBrowse = QString());
     void populateStructure();
@@ -199,6 +237,8 @@ private slots:
     void exportTableToJson();
     void fileSave();
     void fileRevert();
+    void on_actionOpen_Remote_triggered();
+    void on_actionSave_Remote_triggered();
     void exportDatabaseToSQL();
     void importDatabaseFromSQL();
     void openPreferences();
@@ -216,7 +256,7 @@ private slots:
     void loadExtension();
     void reloadSettings();
     void httpresponse(QNetworkReply* reply);
-    void updatePlot(SqliteTableModel* model, bool update = true);
+    void updatePlot(SqliteTableModel* model, bool update = true, bool keepOrResetSelection = true);
     void on_treePlotColumns_itemChanged(QTreeWidgetItem *item, int column);
     void on_treePlotColumns_itemDoubleClicked(QTreeWidgetItem *item, int column);
     void on_butSavePlot_clicked();

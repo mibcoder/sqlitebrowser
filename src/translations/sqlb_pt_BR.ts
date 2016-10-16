@@ -1595,7 +1595,7 @@ Deseja inserir mesmo assim?</translation>
     </message>
     <message>
         <source>Execute SQL [F5, Ctrl+Return]</source>
-        <translation>Executar SQL [F5, Ctrl+Return]</translation>
+        <translation type="vanished">Executar SQL [F5, Ctrl+Return]</translation>
     </message>
     <message>
         <source>Open SQL file</source>
@@ -2231,6 +2231,36 @@ Deixe o campo em branco para usar a codificação do banco de dados.</translatio
         <source>Ctrl+R</source>
         <translation type="unfinished"></translation>
     </message>
+    <message>
+        <source>Remote</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Execute SQL [F5, Ctrl+Return, Ctrl+R]</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Open from Remote</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Save to Remote</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Error while saving the database file. This means that not all changes to the database were saved. You need to resolve the following error first.
+
+%1</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Fetching all data...</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Cancel</source>
+        <translation type="unfinished">Cancelar</translation>
+    </message>
 </context>
 <context>
     <name>PreferencesDialog</name>
@@ -2540,6 +2570,18 @@ Deixe o campo em branco para usar a codificação do banco de dados.</translatio
     </message>
     <message>
         <source>Symbol limit in cell</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Show remote options</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Remote server</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>dbhub.io</source>
         <translation type="unfinished"></translation>
     </message>
 </context>

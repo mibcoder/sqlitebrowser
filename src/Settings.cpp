@@ -101,6 +101,10 @@ QVariant Settings::getSettingsDefaultValue(const QString& group, const QString& 
     if(group == "MainWindow" && name == "windowState")
         return "";
 
+    // Enable the File → Remote menu by default
+    if(group == "MainWindow" && name == "remotemenu")
+        return true;
+
     // SQLLogDock/Log?
     if(group == "SQLLogDock" && name == "Log")
         return "Application";
@@ -191,7 +195,12 @@ QVariant Settings::getSettingsDefaultValue(const QString& group, const QString& 
 
     // editor/fontsize or log/fontsize?
     if((group == "editor" || group == "log") && name == "fontsize")
+#ifdef Q_OS_MAC
+	// Use 12 pt size as the default on OSX
+        return 12;
+#else
         return 9;
+#endif
 
     if(group == "editor")
     {

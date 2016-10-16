@@ -121,8 +121,10 @@ void MainWindow::init()
     shortcuts.push_back(QKeySequence(tr("Ctrl+Return")));
     ui->actionExecuteSql->setShortcuts(shortcuts);
 
-    QShortcut* shortcutBrowseRefresh = new QShortcut(QKeySequence("Ctrl+R"), this);
-    connect(shortcutBrowseRefresh, SIGNAL(activated()), ui->buttonRefresh, SLOT(click()));
+    QShortcut* shortcutBrowseRefreshF5 = new QShortcut(QKeySequence("F5"), this);
+    connect(shortcutBrowseRefreshF5, SIGNAL(activated()), this, SLOT(refresh()));
+    QShortcut* shortcutBrowseRefreshCtrlR = new QShortcut(QKeySequence("Ctrl+R"), this);
+    connect(shortcutBrowseRefreshCtrlR, SIGNAL(activated()), this, SLOT(refresh()));
 
     // Create the actions for the recently opened dbs list
     for(int i = 0; i < MaxRecentFiles; ++i) {
@@ -190,7 +192,7 @@ void MainWindow::init()
     ui->viewMenu->actions().at(4)->setShortcut(QKeySequence(tr("Ctrl+R")));
     ui->viewMenu->actions().at(4)->setIcon(QIcon(":/icons/log_dock"));
 
-    // If we're not compiling in SQLCipher, hide it's FAQ link in the help menu
+    // If we're not compiling in SQLCipher, hide its FAQ link in the help menu
 #ifndef ENABLE_SQLCIPHER
     ui->actionSqlCipherFaq->setVisible(false);
 #endif
@@ -476,6 +478,9 @@ void MainWindow::populateTable()
 
         // Encoding
         m_browseTableModel->setEncoding(tableIt.value().encoding);
+
+        // Plot
+        updatePlot(m_browseTableModel, true, false);
     } else {
         // There aren't any information stored for this table yet, so use some default values
 
@@ -493,6 +498,9 @@ void MainWindow::populateTable()
         // Encoding
         m_browseTableModel->setEncoding(defaultBrowseTableEncoding);
 
+        // Plot
+        updatePlot(m_browseTableModel);
+
         // The filters can be left empty as they are
     }
 
@@ -504,9 +512,6 @@ void MainWindow::populateTable()
 
     // Set the recordset label
     setRecordsetLabel();
-
-    // update plot
-    updatePlot(m_browseTableModel);
 
     // update tree structure viewer dock
     updateTreeStruc(m_browseTableModel);
@@ -532,7 +537,7 @@ bool MainWindow::fileClose()
     browseTableSettings.clear();
     defaultBrowseTableEncoding = QString();
 
-    // Manually update the recordset label inside the Browse tab now
+    // Reset the recordset label inside the Browse tab now
     setRecordsetLabel();
 
     // Reset the plot dock model
@@ -691,8 +696,12 @@ void MainWindow::setRecordsetLabel()
     int from = ui->dataTable->verticalHeader()->visualIndexAt(0) + 1;
     int to = ui->dataTable->verticalHeader()->visualIndexAt(ui->dataTable->height()) - 1;
     int total = m_browseTableModel->totalRowCount();
+
     if(to == -2)
+    {
+        total = 0;
         to = total;
+    }
 
     // Update the validator of the goto row field
     gotoValidator->setRange(0, total);
@@ -701,10 +710,29 @@ void MainWindow::setRecordsetLabel()
     ui->labelRecordset->setText(tr("%1 - %2 of %3").arg(from).arg(to).arg(total));
 }
 
-void MainWindow::browseRefresh()
+void MainWindow::refresh()
 {
-    db.updateSchema();
-    populateTable();
+    // What the Refresh function does depends on the currently active tab. This way the keyboard shortcuts (F5 and Ctrl+R)
+    // always perform some meaningful task; they just happen to be context dependent in the function they trigger.
+    switch(ui->mainTab->currentIndex())
+    {
+    case StructureTab:
+        // Refresh the schema
+        db.updateSchema();
+        break;
+    case BrowseTab:
+        // Refresh the schema and reload the current table
+        db.updateSchema();
+        populateTable();
+        break;
+    case PragmaTab:
+        // Do nothing
+        break;
+    case ExecuteTab:
+        // (Re-)Run the current SQL query
+        executeQuery();
+        break;
+    }
 }
 
 void MainWindow::createTable()
@@ -741,8 +769,8 @@ void MainWindow::compact()
 void MainWindow::deleteObject()
 {
     // Get name and type of object to delete
-    QString table = ui->dbTreeWidget->model()->data(ui->dbTreeWidget->currentIndex().sibling(ui->dbTreeWidget->currentIndex().row(), 0)).toString();
-    QString type = ui->dbTreeWidget->model()->data(ui->dbTreeWidget->currentIndex().sibling(ui->dbTreeWidget->currentIndex().row(), 1)).toString();
+    QString table = ui->dbTreeWidget->model()->data(ui->dbTreeWidget->currentIndex().sibling(ui->dbTreeWidget->currentIndex().row(), 0), Qt::EditRole).toString();
+    QString type = ui->dbTreeWidget->model()->data(ui->dbTreeWidget->currentIndex().sibling(ui->dbTreeWidget->currentIndex().row(), 1), Qt::EditRole).toString();
 
     // Ask user if he really wants to delete that table
     if(QMessageBox::warning(this, QApplication::applicationName(), tr("Are you sure you want to delete the %1 '%2'?\nAll data associated with the %1 will be lost.").arg(type).arg(table),
@@ -863,18 +891,27 @@ void MainWindow::executeQuery()
 
     // Get SQL code to execute. This depends on the button that's been pressed
     QString query;
-    bool singleStep = false;
     int execution_start_line = 0;
     int execution_start_index = 0;
     if(sender()->objectName() == "actionSqlExecuteLine")
     {
         int cursor_line, cursor_index;
-        sqlWidget->getEditor()->getCursorPosition(&cursor_line, &cursor_index);
+        SqlTextEdit *editor = sqlWidget->getEditor();
+
+        editor->getCursorPosition(&cursor_line, &cursor_index);
+
         execution_start_line = cursor_line;
 
-        query = sqlWidget->getEditor()->text(cursor_line);
+        int lineStartCursorPosition = editor->positionFromLineIndex(cursor_line, 0);
 
-        singleStep = true;
+        QString entireSQL = editor->text();
+        QString firstPartEntireSQL = entireSQL.left(lineStartCursorPosition);
+        QString secondPartEntireSQL = entireSQL.right(entireSQL.length() - lineStartCursorPosition);
+
+        QString firstPartSQL = firstPartEntireSQL.split(";").last();
+        QString lastPartSQL = secondPartEntireSQL.split(";").first();
+
+        query = firstPartSQL + lastPartSQL;
     } else {
         // if a part of the query is selected, we will only execute this part
         query = sqlWidget->getSelectedSql();
@@ -884,7 +921,8 @@ void MainWindow::executeQuery()
         else
             sqlWidget->getEditor()->getSelection(&execution_start_line, &execution_start_index, &dummy, &dummy);
     }
-    if (query.isEmpty())
+
+    if (query.trimmed().isEmpty())
         return;
 
     query = query.remove(QRegExp("^\\s*BEGIN TRANSACTION;|COMMIT;\\s*$")).trimmed();
@@ -987,10 +1025,6 @@ void MainWindow::executeQuery()
                 break;
             }
             timer.restart();
-
-            // Stop after the first full statement if we're in single step mode
-            if(singleStep)
-                break;
         } else {
             statusMessage = QString::fromUtf8((const char*)sqlite3_errmsg(db._db)) +
                     ": " + queryPart;
@@ -1112,7 +1146,13 @@ void MainWindow::dbState( bool dirty )
 void MainWindow::fileSave()
 {
     if(db.isOpen())
-        db.releaseAllSavepoints();
+    {
+        if(!db.releaseAllSavepoints())
+        {
+            QMessageBox::warning(this, QApplication::applicationName(), tr("Error while saving the database file. This means that not all changes to the database were "
+                                                                           "saved. You need to resolve the following error first.\n\n%1").arg(db.lastErrorMessage));
+        }
+    }
 }
 
 void MainWindow::fileRevert()
@@ -1408,6 +1448,34 @@ void MainWindow::resizeEvent(QResizeEvent*)
     setRecordsetLabel();
 }
 
+void MainWindow::keyPressEvent(QKeyEvent* event)
+{
+    int tab = -1;
+
+    switch (event->key())
+    {
+    case Qt::Key_1:
+        tab = Tabs::StructureTab;
+        break;
+    case Qt::Key_2:
+        tab = Tabs::BrowseTab;
+        break;
+    case Qt::Key_3:
+        tab = Tabs::PragmaTab;
+        break;
+    case Qt::Key_4:
+        tab = Tabs::ExecuteTab;
+        break;
+    default:
+        break;
+    }
+
+    if (event->modifiers() & Qt::AltModifier && tab != -1)
+        ui->mainTab->setCurrentIndex(tab);
+
+    QMainWindow::keyPressEvent(event);
+}
+
 void MainWindow::loadPragmas()
 {
     pragmaValues.autovacuum = db.getPragma("auto_vacuum").toInt();
@@ -1650,6 +1718,10 @@ void MainWindow::reloadSettings()
     // Refresh view
     populateStructure();
     populateTable();
+
+    // Hide or show the File → Remote menu as needed
+    QAction *remoteMenuAction = ui->menuRemote->menuAction();
+    remoteMenuAction->setVisible(Settings::getSettingsValue("MainWindow", "remotemenu").toBool());
 }
 
 void MainWindow::httpresponse(QNetworkReply *reply)
@@ -1742,12 +1814,10 @@ QVariant::Type guessdatatype(SqliteTableModel* model, int column)
     for(int i = 0; i < std::min(10, model->rowCount()) && type != QVariant::String; ++i)
     {
         QVariant data = model->data(model->index(i, column), Qt::EditRole);
-        if(data.convert(QVariant::Double))
+        if(data.isNull() || data.convert(QVariant::Double))
         {
             type = QVariant::Double;
-        }
-        else
-        {
+        } else {
             QString s = model->data(model->index(i, column)).toString();
             QDate d = QDate::fromString(s, Qt::ISODate);
             if(d.isValid())
@@ -1755,13 +1825,13 @@ QVariant::Type guessdatatype(SqliteTableModel* model, int column)
             else
                 type = QVariant::String;
         }
-
     }
+
     return type;
 }
 }
 
-void MainWindow::updatePlot(SqliteTableModel *model, bool update)
+void MainWindow::updatePlot(SqliteTableModel *model, bool update, bool keepOrResetSelection)
 {
     // add columns to x/y selection tree widget
     if(update)
@@ -1775,15 +1845,29 @@ void MainWindow::updatePlot(SqliteTableModel *model, bool update)
         // save current selected columns, so we can restore them after the update
         QString sItemX; // selected X column
         QMap<QString, QColor> mapItemsY; // selected Y columns with color
-        for(int i = 0; i < ui->treePlotColumns->topLevelItemCount(); ++i)
-        {
-            QTreeWidgetItem* item = ui->treePlotColumns->topLevelItem(i);
-            if(item->checkState(PlotColumnX) == Qt::Checked)
-                sItemX = item->text(PlotColumnField);
 
-            if(item->checkState(PlotColumnY) == Qt::Checked)
+        if(keepOrResetSelection)
+        {
+            // Store the currently selected plot columns to restore them later
+            for(int i = 0; i < ui->treePlotColumns->topLevelItemCount(); ++i)
             {
-                mapItemsY[item->text(PlotColumnField)] = item->backgroundColor(PlotColumnY);
+                QTreeWidgetItem* item = ui->treePlotColumns->topLevelItem(i);
+                if(item->checkState(PlotColumnX) == Qt::Checked)
+                    sItemX = item->text(PlotColumnField);
+
+                if(item->checkState(PlotColumnY) == Qt::Checked)
+                    mapItemsY[item->text(PlotColumnField)] = item->backgroundColor(PlotColumnY);
+            }
+        } else {
+            // Get the plot columns to select from the stored browse table information
+            sItemX = browseTableSettings[ui->comboBrowseTable->currentText()].plotXAxis;
+
+            QMap<QString, PlotSettings> axesY = browseTableSettings[ui->comboBrowseTable->currentText()].plotYAxes;
+            QMap<QString, PlotSettings>::ConstIterator it = axesY.constBegin();
+            while(it != axesY.constEnd())
+            {
+                mapItemsY.insert(it.key(), it.value().colour);
+                ++it;
             }
         }
 
@@ -1899,7 +1983,11 @@ void MainWindow::updatePlot(SqliteTableModel *model, bool update)
                         xdata[i] = model->data(model->index(i, x)).toDouble();
                     }
 
-                    ydata[i] = model->data(model->index(i, y)).toDouble();
+                    QVariant pointdata = model->data(model->index(i, y), Qt::EditRole);
+                    if(pointdata.isNull())
+                        ydata[i] = qQNaN();
+                    else
+                        ydata[i] = pointdata.toDouble();
                 }
 
                 // set some graph styles
@@ -1931,6 +2019,7 @@ void MainWindow::on_treePlotColumns_itemChanged(QTreeWidgetItem *changeitem, int
                this,SLOT(on_treePlotColumns_itemChanged(QTreeWidgetItem*,int)));
 
     // make sure only 1 X axis is selected
+    QString current_table = ui->comboBrowseTable->currentText();
     if(column == PlotColumnX)
     {
         for(int i = 0; i < ui->treePlotColumns->topLevelItemCount(); ++i)
@@ -1941,9 +2030,13 @@ void MainWindow::on_treePlotColumns_itemChanged(QTreeWidgetItem *changeitem, int
                 item->setCheckState(column, Qt::Unchecked);
             }
         }
-    }
-    else if(column == PlotColumnY)
-    {
+
+        // Save settings for this table
+        if(changeitem->checkState(column) == Qt::Checked)
+            browseTableSettings[current_table].plotXAxis = changeitem->text(PlotColumnField);
+        else
+            browseTableSettings[current_table].plotXAxis = QString();
+    } else if(column == PlotColumnY) {
         if(changeitem->checkState(column) == Qt::Checked)
         {
             // get a default color
@@ -1952,10 +2045,17 @@ void MainWindow::on_treePlotColumns_itemChanged(QTreeWidgetItem *changeitem, int
             if(color.isValid())
             {
                 changeitem->setBackgroundColor(column, color);
-            }
-            else
-            {
+
+                // Save settings for this table
+                PlotSettings& plot_settings = browseTableSettings[current_table].plotYAxes[changeitem->text(PlotColumnField)];
+                plot_settings.colour = color;
+                plot_settings.lineStyle = ui->comboLineType->currentIndex();
+                plot_settings.pointShape = (ui->comboPointShape->currentIndex() > 0 ? (ui->comboPointShape->currentIndex()+1) : ui->comboPointShape->currentIndex());
+            } else {
                 changeitem->setCheckState(column, Qt::Unchecked);
+
+                // Save settings for this table
+                browseTableSettings[current_table].plotYAxes.remove(changeitem->text(PlotColumnField));
             }
         }
     }
@@ -1979,14 +2079,22 @@ void MainWindow::on_treePlotColumns_itemDoubleClicked(QTreeWidgetItem *item, int
         QColor curbkcolor = item->backgroundColor(column);
         QColor precolor = !curbkcolor.isValid() ? (Qt::GlobalColor)(qrand() % 13 + 5) : curbkcolor;
         QColor color = colordialog.getColor(precolor, this, tr("Choose a axis color"));
+        QString current_table = ui->comboBrowseTable->currentText();
         if(color.isValid())
         {
             item->setCheckState(column, Qt::Checked);
             item->setBackgroundColor(column, color);
-        }
-        else
-        {
+
+            // Save settings for this table
+            PlotSettings& plot_settings = browseTableSettings[current_table].plotYAxes[item->text(PlotColumnField)];
+            plot_settings.colour = color;
+            plot_settings.lineStyle = ui->comboLineType->currentIndex();
+            plot_settings.pointShape = (ui->comboPointShape->currentIndex() > 0 ? (ui->comboPointShape->currentIndex()+1) : ui->comboPointShape->currentIndex());
+        } else {
             item->setCheckState(column, Qt::Unchecked);
+
+            // Save settings for this table
+            browseTableSettings[current_table].plotYAxes.remove(item->text(PlotColumnField));
         }
     }
 
@@ -2026,6 +2134,16 @@ void MainWindow::on_butSavePlot_clicked()
             ui->plotWidget->savePng(fileName);
         }
     }
+}
+
+void MainWindow::on_actionOpen_Remote_triggered()
+{
+    QDesktopServices::openUrl(QUrl("https://dbhub.io"));
+}
+
+void MainWindow::on_actionSave_Remote_triggered()
+{
+    QDesktopServices::openUrl(QUrl("https://dbhub.io"));
 }
 
 void MainWindow::on_actionWiki_triggered()
@@ -2417,6 +2535,15 @@ void MainWindow::on_comboLineType_currentIndexChanged(int index)
             graph->setLineStyle(lineStyle);
     }
     ui->plotWidget->replot();
+
+    // Save settings for this table
+    QMap<QString, PlotSettings>& graphs = browseTableSettings[ui->comboBrowseTable->currentText()].plotYAxes;
+    QMap<QString, PlotSettings>::Iterator it = graphs.begin();
+    while(it != graphs.end())
+    {
+        it.value().lineStyle = lineStyle;
+        ++it;
+    }
 }
 
 void MainWindow::on_comboPointShape_currentIndexChanged(int index)
@@ -2433,6 +2560,15 @@ void MainWindow::on_comboPointShape_currentIndexChanged(int index)
             graph->setScatterStyle(QCPScatterStyle(shape, 5));
     }
     ui->plotWidget->replot();
+
+    // Save settings for this table
+    QMap<QString, PlotSettings>& graphs = browseTableSettings[ui->comboBrowseTable->currentText()].plotYAxes;
+    QMap<QString, PlotSettings>::Iterator it = graphs.begin();
+    while(it != graphs.end())
+    {
+        it.value().pointShape = shape;
+        ++it;
+    }
 }
 
 void MainWindow::jumpToRow(const QString& table, QString column, const QByteArray& value)
@@ -2593,9 +2729,25 @@ void MainWindow::browseDataFetchAllData()
 {
     if(m_browseTableModel)
     {
+        // Show progress dialog because fetching all data might take some time
+        QProgressDialog progress(tr("Fetching all data..."),
+                                 tr("Cancel"), m_browseTableModel->rowCount(), m_browseTableModel->totalRowCount());
+        progress.setWindowModality(Qt::ApplicationModal);
+        progress.show();
+        qApp->processEvents();
+
         // Make sure all data is loaded
         while(m_browseTableModel->canFetchMore())
+        {
+            // Fetch the next bunch of data
             m_browseTableModel->fetchMore();
+
+            // Update the progress dialog and stop loading data when the cancel button was pressed
+            progress.setValue(m_browseTableModel->rowCount());
+            qApp->processEvents();
+            if(progress.wasCanceled())
+                break;
+        }
 
         // Update plot
         updatePlot(m_browseTableModel);

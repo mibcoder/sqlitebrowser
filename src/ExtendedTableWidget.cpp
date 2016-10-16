@@ -64,6 +64,8 @@ ExtendedTableWidget::ExtendedTableWidget(QWidget* parent) :
     QTableView(parent)
 {
     setHorizontalScrollMode(ExtendedTableWidget::ScrollPerPixel);
+    // Force ScrollPerItem, so scrolling shows all table rows
+    setVerticalScrollMode(ExtendedTableWidget::ScrollPerItem);
 
     connect(verticalScrollBar(), SIGNAL(valueChanged(int)), this, SLOT(vscrollbarChanged(int)));
     connect(this, SIGNAL(clicked(QModelIndex)), this, SLOT(cellClicked(QModelIndex)));
@@ -86,16 +88,33 @@ void ExtendedTableWidget::copy()
 
     SqliteTableModel* m = qobject_cast<SqliteTableModel*>(model());
 
-    // If single image cell selected - copy it to clipboard
+    m_buffer.clear();
+
+    // If a single cell is selected, copy it to clipboard
     if (indices.size() == 1) {
         QImage img;
-        if (img.loadFromData(m->data(indices.first(), Qt::EditRole).toByteArray())) {
+        QVariant data = m->data(indices.first(), Qt::EditRole);
+
+        if (img.loadFromData(data.toByteArray())) { // If it's an image
             qApp->clipboard()->setImage(img);
+            return;
+        } else {
+            QString text = data.toString();
+            if (text.isEmpty()) {
+                // NULL and empty single-cells are handled via inner buffer
+                qApp->clipboard()->clear();
+                QByteArrayList lst;
+                lst << data.toByteArray();
+                m_buffer.push_back(lst);
+                return;
+            }
+
+            if (text.contains('\n'))
+                text = QString("\"%1\"").arg(text);
+            qApp->clipboard()->setText(text);
             return;
         }
     }
-
-    m_buffer.clear();
 
     // If any of the cells contain binary data - we use inner buffer
     bool containsBinary = false;

@@ -121,9 +121,6 @@
              <iconset resource="icons/icons.qrc">
               <normaloff>:/icons/refresh</normaloff>:/icons/refresh</iconset>
             </property>
-            <property name="shortcut">
-             <string>F5</string>
-            </property>
            </widget>
           </item>
           <item>
@@ -845,10 +842,19 @@
      <addaction name="fileExportCSVAction"/>
      <addaction name="fileExportJsonAction"/>
     </widget>
+    <widget class="QMenu" name="menuRemote">
+     <property name="title">
+      <string>Remote</string>
+     </property>
+     <addaction name="actionOpen_Remote"/>
+     <addaction name="actionSave_Remote"/>
+    </widget>
     <addaction name="fileNewAction"/>
     <addaction name="fileOpenAction"/>
     <addaction name="fileAttachAction"/>
     <addaction name="fileCloseAction"/>
+    <addaction name="separator"/>
+    <addaction name="menuRemote"/>
     <addaction name="separator"/>
     <addaction name="fileSaveAction"/>
     <addaction name="fileRevertAction"/>
@@ -1813,10 +1819,7 @@
     <string>&amp;Execute SQL</string>
    </property>
    <property name="toolTip">
-    <string>Execute SQL [F5, Ctrl+Return]</string>
-   </property>
-   <property name="shortcut">
-    <string>F5</string>
+    <string>Execute SQL [F5, Ctrl+Return, Ctrl+R]</string>
    </property>
   </action>
   <action name="actionSqlOpenFile">
@@ -2084,6 +2087,24 @@
     <enum>QAction::NoRole</enum>
    </property>
   </action>
+  <action name="actionOpen_Remote">
+   <property name="text">
+    <string>Open from Remote</string>
+   </property>
+  </action>
+  <action name="actionSave_Remote">
+   <property name="text">
+    <string>Save to Remote</string>
+   </property>
+  </action>
+  <action name="actionRefresh">
+   <property name="text">
+    <string>Refresh</string>
+   </property>
+   <property name="shortcut">
+    <string>F5</string>
+   </property>
+  </action>
  </widget>
  <customwidgets>
   <customwidget>
@@ -2334,7 +2355,7 @@
    <sender>buttonRefresh</sender>
    <signal>clicked()</signal>
    <receiver>MainWindow</receiver>
-   <slot>browseRefresh()</slot>
+   <slot>refresh()</slot>
    <hints>
     <hint type="sourcelabel">
      <x>245</x>
@@ -3130,6 +3151,22 @@
     </hint>
    </hints>
   </connection>
+  <connection>
+   <sender>actionRefresh</sender>
+   <signal>triggered()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>refresh()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>518</x>
+     <y>314</y>
+    </hint>
+   </hints>
+  </connection>
  </connections>
  <slots>
   <slot>fileOpen()</slot>
@@ -3143,7 +3180,7 @@
   <slot>navigateEnd()</slot>
   <slot>navigateGoto()</slot>
   <slot>browseFind(bool)</slot>
-  <slot>browseRefresh()</slot>
+  <slot>refresh()</slot>
   <slot>compact()</slot>
   <slot>helpWhatsThis()</slot>
   <slot>doubleClickTable(QModelIndex)</slot>
