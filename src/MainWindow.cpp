@@ -1007,12 +1007,19 @@ void MainWindow::executeQuery()
                 {
                     modified = true;
 
+					bool containsInsert = queryPart.trimmed().startsWith("INSERT", Qt::CaseInsensitive);
+					bool containsUpdate = queryPart.trimmed().startsWith("UPDATE", Qt::CaseInsensitive);
+					bool containsDelete = queryPart.trimmed().startsWith("DELETE", Qt::CaseInsensitive);
+
                     QString stmtHasChangedDatabase;
-                    if(queryPart.trimmed().startsWith("INSERT", Qt::CaseInsensitive) ||
-                            queryPart.trimmed().startsWith("UPDATE", Qt::CaseInsensitive) ||
-                            queryPart.trimmed().startsWith("DELETE", Qt::CaseInsensitive))
+                    if(containsInsert || containsUpdate || containsDelete) 
                     {
-                        stmtHasChangedDatabase = tr(", %1 rows affected").arg(sqlite3_changes(db._db));
+						if(containsInsert)
+							stmtHasChangedDatabase = tr(", %1 rows affected, last row id = %2")
+							.arg(sqlite3_changes(db._db)).arg(sqlite3_last_insert_rowid(db._db));
+						else
+							stmtHasChangedDatabase = tr(", %1 rows affected").arg(sqlite3_changes(db._db));
+						
                     }
 
                     statusMessage = tr("Query executed successfully: %1 (took %2ms%3)").arg(queryPart.trimmed()).arg(timer.elapsed()).arg(stmtHasChangedDatabase);
